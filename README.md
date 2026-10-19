@@ -1,6 +1,6 @@
 # `sym-rs`
 
-A super limited rewrite of [`sympy`](https://github.com/sympy/sympy) in Rust (I got bored).
+A super limited implementation of [`sympy`](https://github.com/sympy/sympy) in Rust (I got bored).
 
 ## Example
 
@@ -31,5 +31,6 @@ fn main() {
 
 1. Like, 99% of `sympy` is not implemented.
 2. Working with threads is a little annoying because `Symbol`s hold a `&str`, so any symbols containing non-static `&str`s cannot be sent across threads.
+    - This is necessary so `Symbol` can implement `Copy` and be ergonomic to use. Otherwise, there would be `.clone()`s all over the place or I would need to bastardize `Into<Expr> for &Symbol` for implicit clones.
     - The best workaround is to use [`std::thread::scope()`](https://doc.rust-lang.org/stable/std/thread/fn.scope.html), which lets you borrow non-static data across threads.
     - Something like [`tokio`](https://github.com/tokio-rs/tokio) will probably never work.
