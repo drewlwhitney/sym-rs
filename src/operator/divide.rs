@@ -1,37 +1,38 @@
-use super::super::expr::Expr;
-use super::Operation;
+use super::display_helpers;
+use crate::error::{OperationError, OperationResult};
+use crate::expr::Expr;
 use crate::helper_macros::*;
+use crate::subs::SubsMap;
 use std::fmt::{self, Display};
 use std::ops::Div;
 
-#[derive(Clone)]
-pub struct DivideOp<'a>(Expr<'a>, Expr<'a>);
+#[derive(Clone, Debug)]
+pub struct DivideOp<'a>(pub(crate) Expr<'a>, pub(crate) Expr<'a>);
+impl<'a> DivideOp<'a> {
+    /// Create a new instance that divides `left` by `right`.
+    pub fn new(left: impl Into<Expr<'a>>, right: impl Into<Expr<'a>>) -> Self {
+        Self(left.into(), right.into())
+    }
+
+    /// Substitute symbols and try to evaluate the expression.
+    pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
+        Ok(match (self.0.subs(map)?, self.1.subs(map)?) {
+            // can't divide by zero
+            (expr, Expr::Number(right)) if right == 0.0 => {
+                return Err(OperationError::DivideByZero(expr));
+            }
+            (Expr::Number(left), Expr::Number(right)) => (left / right).into(),
+            (left, right) => Self(left, right).into(),
+        })
+    }
+}
 impl<'a> Display for DivideOp<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if matches!(
-            &self.0,
-            Expr::Operation(o) if matches!(*o, Operation::Add(_) | Operation::Subtract(_))
-        ) {
-            write!(f, "({})", self.0)?;
-        } else {
-            write!(f, "{}", self.0)?;
-        }
-
+        display_helpers::write_multiply_divide_operand(f, &self.0)?;
         write!(f, " / ")?;
-
-        if matches!(
-            &self.1,
-            Expr::Operation(o) if matches!(*o, Operation::Add(_) | Operation::Subtract(_))
-        ) {
-            write!(f, "({})", self.1)?;
-        } else {
-            write!(f, "{}", self.1)?;
-        }
-
-        Ok(())
+        display_helpers::write_multiply_divide_operand(f, &self.1)
     }
 }
 
-impl_subs_simple!(DivideOp, /);
 impl_from_op_expr!(DivideOp, Divide);
-impl_operator!(DivideOp, Div, div);
+impl_binary_operator!(DivideOp, Div, div);

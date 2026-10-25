@@ -1,3 +1,4 @@
+pub mod error;
 pub mod expr;
 pub mod helper_macros;
 pub mod operator;

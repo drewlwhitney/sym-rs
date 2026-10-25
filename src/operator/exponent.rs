@@ -1,22 +1,15 @@
-use super::super::expr::Expr;
-use super::super::subs::SubsMap;
+use crate::expr::Expr;
 use crate::helper_macros::*;
 use derive_more::Display;
 
-#[derive(Clone, Display)]
+#[derive(Clone, Display, Debug)]
 #[display("exp({_0})")]
 pub struct ExponentOp<'a>(Expr<'a>);
 impl<'a> ExponentOp<'a> {
     pub fn new(expr: impl Into<Expr<'a>>) -> Self {
         Self(expr.into())
     }
-
-    pub fn subs(self, map: &'a SubsMap) -> Expr<'a> {
-        match self.0.subs(map) {
-            Expr::Number(n) => n.exp().into(),
-            expr => Self(expr).into(),
-        }
-    }
 }
 
+impl_subs_simple!(ExponentOp, f64::exp, self.0);
 impl_from_op_expr!(ExponentOp, Exp);

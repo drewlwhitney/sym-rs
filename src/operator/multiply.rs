@@ -1,37 +1,26 @@
-use super::super::expr::Expr;
-use super::Operation;
+use super::display_helpers;
+use crate::expr::Expr;
 use crate::helper_macros::*;
 use std::fmt::{self, Display};
 use std::ops::Mul;
 
-#[derive(Clone)]
-pub struct MultiplyOp<'a>(Expr<'a>, Expr<'a>);
+#[derive(Clone, Debug)]
+pub struct MultiplyOp<'a>(pub(crate) Expr<'a>, pub(crate) Expr<'a>);
 impl<'a> Display for MultiplyOp<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if matches!(
-            &self.0,
-            Expr::Operation(o) if matches!(*o, Operation::Add(_) | Operation::Subtract(_))
-        ) {
-            write!(f, "({})", self.0)?;
-        } else {
-            write!(f, "{}", self.0)?;
-        }
-
+        display_helpers::write_multiply_divide_operand(f, &self.0)?;
         write!(f, " * ")?;
-
-        if matches!(
-            &self.1,
-            Expr::Operation(o) if matches!(*o, Operation::Add(_) | Operation::Subtract(_))
-        ) {
-            write!(f, "({})", self.1)?;
-        } else {
-            write!(f, "{}", self.1)?;
-        }
-
-        Ok(())
+        display_helpers::write_multiply_divide_operand(f, &self.1)
     }
 }
 
-impl_subs_simple!(MultiplyOp, *);
+impl<'a> MultiplyOp<'a> {
+    /// Create a new instance that multiplies `left` by `right`.
+    pub fn new(left: impl Into<Expr<'a>>, right: impl Into<Expr<'a>>) -> Self {
+        Self(left.into(), right.into())
+    }
+}
+
+impl_subs_simple!(MultiplyOp, Mul::mul, self.0, self.1);
 impl_from_op_expr!(MultiplyOp, Multiply);
-impl_operator!(MultiplyOp, Mul, mul);
+impl_binary_operator!(MultiplyOp, Mul, mul);

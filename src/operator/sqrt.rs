@@ -1,9 +1,10 @@
-use super::super::expr::Expr;
-use super::super::subs::SubsMap;
+use crate::error::{OperationError, OperationResult};
+use crate::expr::Expr;
 use crate::helper_macros::*;
+use crate::subs::SubsMap;
 use derive_more::Display;
 
-#[derive(Clone, Display)]
+#[derive(Clone, Display, Debug)]
 #[display("sqrt({_0})")]
 pub struct SqrtOp<'a>(Expr<'a>);
 impl<'a> SqrtOp<'a> {
@@ -11,11 +12,16 @@ impl<'a> SqrtOp<'a> {
         Self(expr.into())
     }
 
-    pub fn subs(self, map: &'a SubsMap) -> Expr<'a> {
-        match self.0.subs(map) {
-            Expr::Number(n) => n.sqrt().into(),
+    pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
+        Ok(match self.0.subs(map)? {
+            Expr::Number(n) => {
+                if n < 0.0 {
+                    return Err(OperationError::SquareRootOfNegative(n));
+                }
+                n.sqrt().into()
+            }
             expr => Self(expr).into(),
-        }
+        })
     }
 }
 

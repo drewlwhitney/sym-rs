@@ -1,4 +1,4 @@
-# `sym-rs`
+# README
 
 A super limited implementation of [`sympy`](https://github.com/sympy/sympy) in Rust (I got bored).
 
