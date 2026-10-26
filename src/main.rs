@@ -1,5 +1,7 @@
 use derive_more::Display;
 use std::collections::HashMap;
+use std::thread;
+use std::time::Duration;
 use symrs::Symbol;
 use symrs::expr::Expr;
 use symrs::operator::Operand;
@@ -7,10 +9,10 @@ use symrs::subs::Substitute;
 
 #[derive(Clone, Display, Debug, PartialEq)]
 #[display("{_0} + 1")]
-struct AddOneOp<'a>(Expr<'a>);
+struct AddOneOp(Expr);
 
-impl<'a> Substitute<'a> for AddOneOp<'a> {
-    fn subs(self: Box<Self>, map: &symrs::subs::SubsMap) -> symrs::error::OperationResult<'a> {
+impl Substitute for AddOneOp {
+    fn subs(&self, map: &symrs::subs::SubsMap) -> symrs::error::OperationResult {
         Ok(match self.0.subs(map)? {
             Expr::Number(n) => Expr::Number(n + 1.0),
             expr => Self(expr).into(),
@@ -25,10 +27,21 @@ fn main() {
     let y = Symbol::new(&y_id);
 
     // 2x + 3y² - exp(3x/y)
-    let equation = 2.0 * x + 3.0 * y.pow(2.0) - (3.0 * x / y).exp();
+    let equation = 2.0 * &x + 3.0 * y.pow(2.0) - (3.0 * &x / &y).exp();
 
-    let left: Expr = AddOneOp(x + y).into();
-    let right: Expr = AddOneOp(x + y).into();
+    let left: Expr = AddOneOp(&x + &y).into();
+    let right: Expr = AddOneOp(&x + &y).into();
+
+    thread::spawn({
+        let equation = equation.clone();
+        let x = x.clone();
+        let y = y.clone();
+        move || {
+            let subs_map = HashMap::from([(x, 5.3), (y, -22.8)]);
+            // outputs 1569.62210617179
+            println!("{}", equation.subs(&subs_map).unwrap());
+        }
+    });
 
     assert_eq!(left, right);
 
@@ -42,4 +55,6 @@ fn main() {
     let subs_map = HashMap::from([(x, 5.3), (y, -22.8)]);
     // outputs 1569.62210617179
     println!("{}", equation.subs(&subs_map).unwrap());
+
+    thread::sleep(Duration::from_secs(1));
 }

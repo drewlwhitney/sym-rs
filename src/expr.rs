@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::error::OperationResult;
 use super::operator::Operation;
 use super::subs::SubsMap;
@@ -5,17 +7,18 @@ use super::subs::Substitute;
 use super::symbol::Symbol;
 use derive_more::Display;
 
+/// Basic unit for any mathematical expression.
 #[derive(Clone, Display, Debug, PartialEq)]
-pub enum Expr<'a> {
+pub enum Expr {
     Number(f64),
-    Symbol(Symbol<'a>),
-    Operation(Operation<'a>),
+    Symbol(Symbol),
+    Operation(Operation),
 }
 
-impl<'a> Expr<'a> {
-    pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
+impl Expr {
+    pub fn subs(&self, map: &SubsMap) -> OperationResult {
         Ok(match self {
-            Self::Number(n) => Self::Number(n),
+            Self::Number(n) => Self::Number(*n),
             Self::Symbol(symbol) => symbol.subs(map),
             Self::Operation(op) => op.subs(map)?,
         })
@@ -33,18 +36,35 @@ impl<'a> Expr<'a> {
     }
 }
 
-impl<'a> From<f64> for Expr<'a> {
+impl From<&Expr> for Expr {
+    fn from(value: &Expr) -> Self {
+        // NOTE: this `.clone()` is essentially `Arc::clone()` so it's cheap
+        value.clone()
+    }
+}
+impl From<f64> for Expr {
     fn from(value: f64) -> Self {
         Self::Number(value)
     }
 }
-impl<'a> From<Symbol<'a>> for Expr<'a> {
-    fn from(value: Symbol<'a>) -> Self {
+impl From<&f64> for Expr {
+    fn from(value: &f64) -> Self {
+        Self::Number(*value)
+    }
+}
+impl<'a> From<Symbol> for Expr {
+    fn from(value: Symbol) -> Self {
         Self::Symbol(value)
     }
 }
-impl<'a, T: Substitute<'a> + 'a> From<T> for Expr<'a> {
+impl<'a> From<&Symbol> for Expr {
+    fn from(value: &Symbol) -> Self {
+        // NOTE: this `.clone()` is essentially `Arc::clone()` so it's cheap
+        Self::Symbol(value.clone())
+    }
+}
+impl<T: Substitute + 'static> From<T> for Expr {
     fn from(value: T) -> Self {
-        Self::Operation(Operation::Custom(Box::new(value)))
+        Self::Operation(Operation::Custom(Arc::new(value)))
     }
 }

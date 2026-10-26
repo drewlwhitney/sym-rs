@@ -4,9 +4,9 @@ use derive_more::Display;
 
 #[derive(Clone, Display, Debug, PartialEq)]
 #[display("|{_0}|")]
-pub struct AbsOp<'a>(Expr<'a>);
-impl<'a> AbsOp<'a> {
-    pub fn new(expr: impl Into<Expr<'a>>) -> Self {
+pub struct AbsOp(Expr);
+impl AbsOp {
+    pub fn new(expr: impl Into<Expr>) -> Self {
         Self(expr.into())
     }
 }
@@ -26,7 +26,7 @@ mod tests {
         let a = Symbol::new("a");
         let b = Symbol::new("b");
 
-        let map = HashMap::from([(a, -32.0), (b, 32.0)]);
+        let map = HashMap::from([(a.clone(), -32.0), (b.clone(), 32.0)]);
 
         // symbol
         assert_eq!(a.abs().subs(&map).unwrap().num_or_panic(), 32.0);

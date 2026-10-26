@@ -1,13 +1,13 @@
 use crate::expr::Expr;
 use thiserror::Error;
 
-pub type OperationResult<'a> = Result<'a, Expr<'a>>;
-pub type Result<'a, T> = std::result::Result<T, OperationError<'a>>;
+pub type OperationResult = Result<Expr>;
+pub type Result<T> = std::result::Result<T, OperationError>;
 
 #[derive(Error, Clone, Debug, PartialEq)]
-pub enum OperationError<'a> {
+pub enum OperationError {
     #[error("Cannot divide {_0} by 0")]
-    DivideByZero(Expr<'a>),
+    DivideByZero(Expr),
 
     #[error("Cannot take square root of negative number {_0}")]
     SquareRootOfNegative(f64),

@@ -10,6 +10,7 @@ pub mod sqrt;
 pub mod subtract;
 
 use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::sync::Arc;
 
 use super::expr::Expr;
 use super::subs::{SubsMap, Substitute};
@@ -27,21 +28,21 @@ pub use sqrt::SqrtOp;
 pub use subtract::SubtractOp;
 
 #[derive(Clone, Display, Debug, PartialEq)]
-pub enum Operation<'a> {
-    Add(Box<AddOp<'a>>),
-    Subtract(Box<SubtractOp<'a>>),
-    Multiply(Box<MultiplyOp<'a>>),
-    Divide(Box<DivideOp<'a>>),
-    Exp(Box<ExponentOp<'a>>),
-    Power(Box<PowerOp<'a>>),
-    Sqrt(Box<SqrtOp<'a>>),
-    Abs(Box<AbsOp<'a>>),
-    Neg(Box<NegOp<'a>>),
-    Custom(Box<dyn Substitute<'a> + 'a>),
+pub enum Operation {
+    Add(Arc<AddOp>),
+    Subtract(Arc<SubtractOp>),
+    Multiply(Arc<MultiplyOp>),
+    Divide(Arc<DivideOp>),
+    Exp(Arc<ExponentOp>),
+    Power(Arc<PowerOp>),
+    Sqrt(Arc<SqrtOp>),
+    Abs(Arc<AbsOp>),
+    Neg(Arc<NegOp>),
+    Custom(Arc<dyn Substitute>),
 }
 
-impl<'a> Operation<'a> {
-    pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
+impl Operation {
+    pub fn subs(&self, map: &SubsMap) -> OperationResult {
         match self {
             Self::Add(o) => o.subs(map),
             Self::Subtract(o) => o.subs(map),
@@ -62,69 +63,70 @@ mod sealed {
     use super::Symbol;
 
     pub trait Sealed {}
-    impl Sealed for Expr<'_> {}
-    impl Sealed for Symbol<'_> {}
+    impl Sealed for Expr {}
+    impl Sealed for Symbol {}
     impl Sealed for f64 {}
 }
 
 /// An item that can act as an operand to mathematical operations.
 /// This trait cannot be implemented outside `symrs`.
-pub trait Operand<'a>:
+pub trait Operand:
     sealed::Sealed
-    + Into<Expr<'a>>
-    + Add<Expr<'a>>
-    + Add<Symbol<'a>>
+    + Add<Expr>
+    + Add<Symbol>
     + Add<f64>
-    + Sub<Expr<'a>>
-    + Sub<Symbol<'a>>
+    + Sub<Expr>
+    + Sub<Symbol>
     + Sub<f64>
-    + Mul<Expr<'a>>
-    + Mul<Symbol<'a>>
+    + Mul<Expr>
+    + Mul<Symbol>
     + Mul<f64>
-    + Div<Expr<'a>>
-    + Div<Symbol<'a>>
+    + Div<Expr>
+    + Div<Symbol>
     + Div<f64>
     + Neg
+where
+    for<'a> &'a Self: Into<Expr>,
 {
     /// Return `exp(self)`.
-    fn exp(self) -> Expr<'a> {
+    fn exp(&self) -> Expr {
         ExponentOp::new(self).into()
     }
 
     /// Return `self^power`.
-    fn pow(self, power: impl Into<Expr<'a>>) -> Expr<'a> {
+    fn pow(&self, power: impl Into<Expr>) -> Expr {
         PowerOp::new(self, power).into()
     }
 
     /// Return `sqrt(self)`.
-    fn sqrt(self) -> Expr<'a> {
+    fn sqrt(&self) -> Expr {
         SqrtOp::new(self).into()
     }
 
     /// Return `|self|`.
-    fn abs(self) -> Expr<'a> {
+    fn abs(&self) -> Expr {
         AbsOp::new(self).into()
     }
 }
 
 // this gets implemented for `Symbol` and `Expr`.
 impl<
-    'a,
     T: sealed::Sealed
-        + Into<Expr<'a>>
-        + Add<Expr<'a>>
-        + Add<Symbol<'a>>
+        + Add<Expr>
+        + Add<Symbol>
         + Add<f64>
-        + Sub<Expr<'a>>
-        + Sub<Symbol<'a>>
+        + Sub<Expr>
+        + Sub<Symbol>
         + Sub<f64>
-        + Mul<Expr<'a>>
-        + Mul<Symbol<'a>>
+        + Mul<Expr>
+        + Mul<Symbol>
         + Mul<f64>
-        + Div<Expr<'a>>
-        + Div<Symbol<'a>>
+        + Div<Expr>
+        + Div<Symbol>
         + Div<f64>
         + Neg,
-> Operand<'a> for T
+> Operand for T
+where
+    for<'a> &'a T: Into<Expr>,
 {
 }

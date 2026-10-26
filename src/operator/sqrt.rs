@@ -6,13 +6,13 @@ use derive_more::Display;
 
 #[derive(Clone, Display, Debug, PartialEq)]
 #[display("sqrt({_0})")]
-pub struct SqrtOp<'a>(Expr<'a>);
-impl<'a> SqrtOp<'a> {
-    pub fn new(expr: impl Into<Expr<'a>>) -> Self {
+pub struct SqrtOp(Expr);
+impl SqrtOp {
+    pub fn new(expr: impl Into<Expr>) -> Self {
         Self(expr.into())
     }
 
-    pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
+    pub fn subs(&self, map: &SubsMap) -> OperationResult {
         Ok(match self.0.subs(map)? {
             Expr::Number(n) => {
                 if n < 0.0 {
@@ -32,7 +32,6 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::error::OperationError;
-    use crate::expr::Expr;
     use crate::operator::Operand;
     use crate::symbol::Symbol;
 
@@ -41,7 +40,7 @@ mod tests {
         let a = Symbol::new("a");
         let b = Symbol::new("b");
 
-        let map = HashMap::from([(a, 66.0), (b, -66.0)]);
+        let map = HashMap::from([(a.clone(), 66.0), (b.clone(), -66.0)]);
 
         // symbol
         assert_eq!(a.sqrt().subs(&map).unwrap().num_or_panic(), f64::sqrt(66.0));
@@ -52,7 +51,7 @@ mod tests {
         );
         // number
         assert_eq!(
-            (2.0).sqrt().subs(&map).unwrap().num_or_panic(),
+            2.0.sqrt().subs(&map).unwrap().num_or_panic(),
             f64::sqrt(2.0)
         );
 
@@ -69,7 +68,7 @@ mod tests {
         );
         // number
         assert_eq!(
-            Expr::from(-101.00).sqrt().subs(&map).unwrap_err(),
+            (-101.00).sqrt().subs(&map).unwrap_err(),
             OperationError::SquareRootOfNegative(-101.00)
         );
     }

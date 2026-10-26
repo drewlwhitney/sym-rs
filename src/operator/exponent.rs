@@ -4,9 +4,9 @@ use derive_more::Display;
 
 #[derive(Clone, Display, Debug, PartialEq)]
 #[display("exp({_0})")]
-pub struct ExponentOp<'a>(Expr<'a>);
-impl<'a> ExponentOp<'a> {
-    pub fn new(expr: impl Into<Expr<'a>>) -> Self {
+pub struct ExponentOp(Expr);
+impl ExponentOp {
+    pub fn new(expr: impl Into<Expr>) -> Self {
         Self(expr.into())
     }
 }
@@ -26,7 +26,7 @@ mod tests {
         let a = Symbol::new("a");
         let b = Symbol::new("b");
 
-        let map = HashMap::from([(a, 10.0), (b, -10.0)]);
+        let map = HashMap::from([(a.clone(), 10.0), (b.clone(), -10.0)]);
 
         // symbol
         assert_eq!(a.exp().subs(&map).unwrap().num_or_panic(), f64::exp(10.0));
