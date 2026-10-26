@@ -7,3 +7,4 @@ edition = "2024"
 derive_more = { version = "2.1.1", features = ["display"] }
 dyn-clone = "1.0.20"
 thiserror = "2.0.21"
+typeid = "1.0.3"

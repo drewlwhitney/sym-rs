@@ -4,7 +4,7 @@ use thiserror::Error;
 pub type OperationResult<'a> = Result<'a, Expr<'a>>;
 pub type Result<'a, T> = std::result::Result<T, OperationError<'a>>;
 
-#[derive(Error, Clone, Debug)]
+#[derive(Error, Clone, Debug, PartialEq)]
 pub enum OperationError<'a> {
     #[error("Cannot divide {_0} by 0")]
     DivideByZero(Expr<'a>),

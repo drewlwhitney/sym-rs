@@ -5,12 +5,13 @@ use super::subs::Substitute;
 use super::symbol::Symbol;
 use derive_more::Display;
 
-#[derive(Clone, Display, Debug)]
+#[derive(Clone, Display, Debug, PartialEq)]
 pub enum Expr<'a> {
     Number(f64),
     Symbol(Symbol<'a>),
     Operation(Operation<'a>),
 }
+
 impl<'a> Expr<'a> {
     pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
         Ok(match self {
@@ -19,7 +20,19 @@ impl<'a> Expr<'a> {
             Self::Operation(op) => op.subs(map)?,
         })
     }
+
+    /// Get the inner number or panic if this expression is not a number.
+    pub fn num_or_panic(self) -> f64 {
+        let Self::Number(n) = self else {
+            panic!(
+                "Called `.num_or_panic()` on non-number expression `{}`",
+                self
+            );
+        };
+        n
+    }
 }
+
 impl<'a> From<f64> for Expr<'a> {
     fn from(value: f64) -> Self {
         Self::Number(value)

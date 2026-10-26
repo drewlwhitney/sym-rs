@@ -6,8 +6,9 @@ use crate::subs::SubsMap;
 use std::fmt::{self, Display};
 use std::ops::Div;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DivideOp<'a>(pub(crate) Expr<'a>, pub(crate) Expr<'a>);
+
 impl<'a> DivideOp<'a> {
     /// Create a new instance that divides `left` by `right`.
     pub fn new(left: impl Into<Expr<'a>>, right: impl Into<Expr<'a>>) -> Self {
@@ -16,16 +17,21 @@ impl<'a> DivideOp<'a> {
 
     /// Substitute symbols and try to evaluate the expression.
     pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
-        Ok(match (self.0.subs(map)?, self.1.subs(map)?) {
-            // can't divide by zero
-            (expr, Expr::Number(right)) if right == 0.0 => {
-                return Err(OperationError::DivideByZero(expr));
+        Ok(match self.1.subs(map)? {
+            Expr::Number(divisor) => {
+                if divisor == 0.0 {
+                    return Err(OperationError::DivideByZero(self.0));
+                }
+                match self.0.subs(map)? {
+                    Expr::Number(dividend) => (dividend / divisor).into(),
+                    expr => Self::new(expr, divisor).into(),
+                }
             }
-            (Expr::Number(left), Expr::Number(right)) => (left / right).into(),
-            (left, right) => Self(left, right).into(),
+            expr => Self(self.0.subs(map)?, expr).into(),
         })
     }
 }
+
 impl<'a> Display for DivideOp<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         display_helpers::write_multiply_divide_operand(f, &self.0)?;
@@ -36,3 +42,101 @@ impl<'a> Display for DivideOp<'a> {
 
 impl_from_op_expr!(DivideOp, Divide);
 impl_binary_operator!(DivideOp, Div, div);
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::symbol::Symbol;
+
+    #[test]
+    fn operator() {
+        let a = Symbol::new("a");
+        let b = Symbol::new("b");
+        let c = Symbol::new("c");
+        let d = Symbol::new("d");
+
+        // symbol / symbol
+        assert_eq!(a / b, DivideOp::new(a, b).into());
+        // symbol / expr
+        assert_eq!(a / (b / c), DivideOp::new(a, DivideOp::new(b, c)).into());
+        // symbol / number
+        assert_eq!(a / 2.0, DivideOp::new(a, 2.0).into());
+        // expr / expr
+        assert_eq!(
+            (a / b) / (c / d),
+            DivideOp::new(DivideOp::new(a, b), DivideOp::new(c, d)).into()
+        );
+        // expr / symbol
+        assert_eq!((a / b) / c, DivideOp::new(DivideOp::new(a, b), c).into());
+        // expr / number
+        assert_eq!(
+            (a / b) / 2.0,
+            DivideOp::new(DivideOp::new(a, b), 2.0).into()
+        );
+        // number / symbol
+        assert_eq!(2.0 / a, DivideOp::new(2.0, a).into());
+        // number / expr
+        assert_eq!(
+            2.0 / (a / b),
+            DivideOp::new(2.0, DivideOp::new(a, b)).into()
+        );
+    }
+
+    #[test]
+    fn subs() {
+        let a = Symbol::new("a");
+        let b = Symbol::new("b");
+        let c = Symbol::new("c");
+        let d = Symbol::new("d");
+
+        let map = HashMap::from([(a, 2.0), (b, 3.0), (c, 4.0), (d, 5.0)]);
+
+        // symbol / symbol
+        assert_eq!((a / b).subs(&map).unwrap().num_or_panic(), 2.0 / 3.0);
+        // symbol / expr
+        assert_eq!(
+            (a / (b / c)).subs(&map).unwrap().num_or_panic(),
+            2.0 / (3.0 / 4.0)
+        );
+        // symbol / number
+        assert_eq!((a / 2.0).subs(&map).unwrap().num_or_panic(), 2.0 / 2.0);
+        // expr / expr
+        assert_eq!(
+            (((a / b) / (c / d)).subs(&map).unwrap().num_or_panic()),
+            (2.0 / 3.0) / (4.0 / 5.0)
+        );
+        // expr / symbol
+        assert_eq!(
+            ((a / b) / c).subs(&map).unwrap().num_or_panic(),
+            (2.0 / 3.0) / 4.0
+        );
+        // expr / number
+        assert_eq!(
+            ((a / b) / 2.0).subs(&map).unwrap().num_or_panic(),
+            (2.0 / 3.0) / 2.0
+        );
+        // number / symbol
+        assert_eq!((2.0 / a).subs(&map).unwrap().num_or_panic(), 2.0 / 2.0);
+        // number / expr
+        assert_eq!(
+            (2.0 / (a / b)).subs(&map).unwrap().num_or_panic(),
+            2.0 / (2.0 / 3.0)
+        );
+
+        // error cases (divide by zero)
+        // symbol / 0.0
+        assert_eq!(
+            (a / 0.0).subs(&map).unwrap_err(),
+            OperationError::DivideByZero(a.into())
+        );
+        // expr / 0.0
+        assert_eq!(
+            ((a / b) / 0.0).subs(&map).unwrap_err(),
+            OperationError::DivideByZero(DivideOp::new(a, b).into())
+        );
+        // number / 0.0
+        assert_eq!((Expr::from(55.0) / 0.0).subs(&map).unwrap_err(), OperationError::DivideByZero(55.0.into()));
+    }
+}

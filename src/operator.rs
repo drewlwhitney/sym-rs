@@ -26,7 +26,7 @@ pub use power::PowerOp;
 pub use sqrt::SqrtOp;
 pub use subtract::SubtractOp;
 
-#[derive(Clone, Display, Debug)]
+#[derive(Clone, Display, Debug, PartialEq)]
 pub enum Operation<'a> {
     Add(Box<AddOp<'a>>),
     Subtract(Box<SubtractOp<'a>>),
@@ -39,6 +39,7 @@ pub enum Operation<'a> {
     Neg(Box<NegOp<'a>>),
     Custom(Box<dyn Substitute<'a> + 'a>),
 }
+
 impl<'a> Operation<'a> {
     pub fn subs(self, map: &SubsMap) -> OperationResult<'a> {
         match self {
@@ -63,6 +64,7 @@ mod sealed {
     pub trait Sealed {}
     impl Sealed for Expr<'_> {}
     impl Sealed for Symbol<'_> {}
+    impl Sealed for f64 {}
 }
 
 /// An item that can act as an operand to mathematical operations.
@@ -105,6 +107,7 @@ pub trait Operand<'a>:
     }
 }
 
+// this gets implemented for `Symbol` and `Expr`.
 impl<
     'a,
     T: sealed::Sealed

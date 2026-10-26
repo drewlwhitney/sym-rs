@@ -5,7 +5,7 @@ use crate::operator::Operation;
 use std::fmt::{self, Display};
 use std::ops::Neg;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NegOp<'a>(Expr<'a>);
 impl<'a> NegOp<'a> {
     /// Create a new instance that negates
@@ -51,3 +51,38 @@ impl Display for NegOp<'_> {
 impl_subs_simple!(NegOp, Neg::neg, self.0);
 impl_unary_operator!(NegOp, Neg, neg);
 impl_from_op_expr!(NegOp, Neg);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::symbol::Symbol;
+    use std::collections::HashMap;
+
+    #[test]
+    fn operator() {
+        let a = Symbol::new("a");
+
+        // symbol
+        assert_eq!(-a, NegOp::new(a).into());
+        // expr
+        assert_eq!(-(-a), NegOp::new(NegOp::new(a)).into());
+    }
+
+    #[test]
+    fn subs() {
+        let a = Symbol::new("a");
+        let b = Symbol::new("b");
+
+        let map = HashMap::from([(a, 15.0), (b, -15.0)]);
+
+        // symbol
+        assert_eq!((-a).subs(&map).unwrap().num_or_panic(), -15.0);
+        assert_eq!((-b).subs(&map).unwrap().num_or_panic(), 15.0);
+        // expr
+        assert_eq!((-(-a)).subs(&map).unwrap().num_or_panic(), 15.0);
+        assert_eq!((-(-b)).subs(&map).unwrap().num_or_panic(), -15.0);
+        // number
+        assert_eq!((-Expr::from(1.0)).subs(&map).unwrap().num_or_panic(), -1.0);
+        assert_eq!((-Expr::from(-1.0)).subs(&map).unwrap().num_or_panic(), 1.0);
+    }
+}
